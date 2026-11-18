@@ -501,8 +501,9 @@ def _tiled_model_call(
                     audio_acc = audio_acc + pred_streams[1].float()
                 audio_n += 1
             del tile_x, pred, pred_streams, pred_video
-            if device.type == "cuda":
-                torch.cuda.empty_cache()
+            if device.type != "cpu":  # local patch: also release on MPS
+                import comfy.model_management as _mm
+                _mm.soft_empty_cache()
     finally:
         base.latent_shapes = saved_shapes
         model_k.latent_image = saved_latent_image

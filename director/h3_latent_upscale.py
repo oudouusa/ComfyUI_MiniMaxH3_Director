@@ -539,7 +539,8 @@ def upscale_h3_video_latent(
             f"{int(target_width)}×{int(target_height)})."
         )
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    import comfy.model_management as _mm  # local patch: Metal (MPS) support
+    device = _mm.get_torch_device()
     # Official 3D node defaults to fp32; bf16 GroupNorm on this net can collapse
     # to NaN/mud and decode as a brown static frame.
     dtype = torch.float32
@@ -578,8 +579,8 @@ def upscale_h3_video_latent(
         # Keep the 3D net off the GPU so MiniMaxH3 does not re-stage ~20GB.
         model.to("cpu")
         del x
-        if device.type == "cuda":
-            torch.cuda.empty_cache()
+        if device.type != "cpu":
+            _mm.soft_empty_cache()
     if squeezed == "batch" and out.shape[0] == 1:
         out = out.squeeze(0)
     packed = dict(video_latent) if isinstance(video_latent, dict) else {}
